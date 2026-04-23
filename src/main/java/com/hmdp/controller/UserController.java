@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.RandomUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.hmdp.dto.LoginFormDTO;
 import com.hmdp.dto.Result;
 import com.hmdp.dto.UserDTO;
@@ -82,7 +83,7 @@ public class UserController {
 
         // 4.一致，根据手机号查询用户
         // 【修复点1】这里不能直接用 query().eq，要加上 userService. 或者用 LambdaQueryWrapper
-        User user = userService.query().eq("phone", phone).one();
+        User user = userService.getOne(new QueryWrapper<User>().eq("phone", phone));
 
         // 5.判断用户是否存在
         if(user == null){
