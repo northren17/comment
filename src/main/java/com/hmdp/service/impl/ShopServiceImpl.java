@@ -5,12 +5,14 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.hmdp.dto.Result;
+import com.hmdp.entity.CacheClient;
 import com.hmdp.entity.RedisData;
 import com.hmdp.entity.Shop;
 import com.hmdp.mapper.ShopMapper;
 import com.hmdp.service.IShopService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import io.netty.util.internal.StringUtil;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,8 @@ import static com.hmdp.utils.RedisConstants.*;
 public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IShopService {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private CacheClient cacheClient;
     //创建一个 固定大小为 10 的线程池。
 public static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
     /**
@@ -37,19 +41,33 @@ public static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedT
      */
     @Override
     public Result queryById(Long id) {
-        //缓存穿透        Shop shop = queryWithPassThrough(id);
-        Shop shop =queryWithMutex(id);
+        // 解决缓存穿透
+        Shop shop = cacheClient
+                .queryWithPassThrough(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
+
+        // 互斥锁解决缓存击穿
+        // Shop shop = cacheClient
+        //         .queryWithMutex(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
+
+        // 逻辑过期解决缓存击穿
+        // Shop shop = cacheClient
+        //         .queryWithLogicalExpire(CACHE_SHOP_KEY, id, Shop.class, this::getById, 20L, TimeUnit.SECONDS);
+
+        if (shop == null) {
+            return Result.fail("店铺不存在！");
+        }
+        // 7.返回
         return Result.ok(shop);
     }
     /*
     缓存穿透解决方案：大量无效信息访问数据库
-     */
-/*
+     *//*
+*//*
 互斥锁缓存击穿解决：热点key突然失效，大量用户访问db
- */
-    /*
+ *//*
+    *//*
     获取释放互斥锁
-     */
+     *//*
 private boolean tryLock(String key) {
     Boolean flag = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", 10, TimeUnit.SECONDS);
     return BooleanUtil.isTrue(flag);
@@ -57,20 +75,20 @@ private boolean tryLock(String key) {
     private void unlock(String key) {
         stringRedisTemplate.delete(key);
     }
-    /*
+    *//*
     互斥查询
-     */
+     *//*
 public Shop queryWithMutex(Long id)  {
     String key = CACHE_SHOP_KEY + id;
     // 1、从redis中查询商铺缓存
     String shopJson = stringRedisTemplate.opsForValue().get(key);
     // 2、判断是否存在
-    if (StrUtil.isNotBlank(shopJson)) {
+    if (StrUtil.isNotBlank(shopJson)) {//必须有数据，空串也排除
         // 存在,直接返回
         return JSONUtil.toBean(shopJson, Shop.class);
     }
     //判断命中的值是否是空值
-    if (shopJson != null) {            //区分“有数据 / 空数据 / 没查过”三种状态
+    if (shopJson != null) {            //区分“有数据 / 空数据 “”：查过数据库/ 没查过 为null”三种状态
         //返回一个错误信息
         return null;
     }
@@ -107,9 +125,9 @@ public Shop queryWithMutex(Long id)  {
     }
     return shop;
 }
-/*
+*//*
 逻辑过期时间
- */
+ *//*
 public Shop queryWithLogicalExpire( Long id ){
     String key = CACHE_SHOP_KEY + id;
     //1.从redis中查询
@@ -117,10 +135,10 @@ public Shop queryWithLogicalExpire( Long id ){
   // 2.未命中则返回null，前提redis预热
 if (StrUtil.isBlank(shopJson)) {
         return null;
-        /*   json == null
+        *//*   json == null
            json == ""
            json == " "
-        都算“没有缓存”  */
+        都算“没有缓存”  *//*
     }
 //3.命中判断是否过期
     RedisData redisData = JSONUtil.toBean(shopJson, RedisData.class);
@@ -173,7 +191,7 @@ if (StrUtil.isBlank(shopJson)) {
                 CACHE_SHOP_KEY + id,
                 json
         );
-    }
+    }*/
 /*
 更新店铺
  */
