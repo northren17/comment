@@ -3,25 +3,30 @@ package com.hmdp.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.dto.Result;
 import com.hmdp.entity.Voucher;
-import com.hmdp.entity.VoucherOrder;
 import com.hmdp.mapper.VoucherMapper;
 import com.hmdp.entity.SeckillVoucher;
 import com.hmdp.service.ISeckillVoucherService;
 import com.hmdp.service.IVoucherService;
-import com.hmdp.utils.RedisIdWorker;
-import com.hmdp.utils.UserHolder;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import static com.hmdp.utils.RedisConstants.SECKILL_ORDER_KEY;
+import static com.hmdp.utils.RedisConstants.SECKILL_STOCK_KEY;
+import static com.hmdp.utils.RedisConstants.SECKILL_VOUCHER_KEY;
 
 @Service
 public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> implements IVoucherService {
 
     @Resource
     private ISeckillVoucherService seckillVoucherService;
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
 
 
     @Override
@@ -44,6 +49,21 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
         seckillVoucher.setBeginTime(voucher.getBeginTime());
         seckillVoucher.setEndTime(voucher.getEndTime());
         seckillVoucherService.save(seckillVoucher);
+
+        // 同步秒杀库存到 Redis
+        stringRedisTemplate.opsForValue().set(SECKILL_STOCK_KEY + voucher.getId(), voucher.getStock().toString());
+
+        // 同步秒杀券关键信息到 Redis
+        Map<String, String> voucherMap = new HashMap<>();
+        voucherMap.put("voucherId", voucher.getId().toString());
+        voucherMap.put("stock", voucher.getStock().toString());
+        voucherMap.put("beginTime", voucher.getBeginTime().toString());
+        voucherMap.put("endTime", voucher.getEndTime().toString());
+        stringRedisTemplate.opsForHash().putAll(SECKILL_VOUCHER_KEY + voucher.getId(), voucherMap);
+
+        // 重置一人一单标记集合
+        stringRedisTemplate.delete(SECKILL_ORDER_KEY + voucher.getId());
     }
+
 
 }

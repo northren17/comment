@@ -42,5 +42,6 @@ public class RedisIdWorker {
 
         // 3.拼接并返回
         return timestamp << COUNT_BITS | count;
+        //返回哪一天的哪一单
     }
 }
