@@ -12,14 +12,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.List;
-
-/**
- * <p>
- * 前端控制器
- * </p>
- *
- 
- */
 @RestController
 @RequestMapping("/blog")
 public class BlogController {
@@ -67,5 +59,10 @@ public class BlogController {
     @PutMapping("/likes/{id}")
     public Result queryBlogLikes(@PathVariable("id") Long id) {
         return blogService.queryBlogLikes(id);
+    }
+    @GetMapping("/of/follow")
+    public Result queryBlogOfFollow(
+        @RequestParam("lastId") Long max, @RequestParam(value = "offset", defaultValue = "0") Integer offset){
+        return blogService.queryBlogOfFollow(max, offset);
     }
 }
