@@ -70,7 +70,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         List<Long> result = stringRedisTemplate.opsForValue().bitField(
                 key,
                 org.springframework.data.redis.connection.BitFieldSubCommands.create()
-                  .get(org.springframework.data.redis.connection.BitFieldSubCommands.BitFieldType.unsigned(dayOfMonth)).valueAt(0)
+                        .get(org.springframework.data.redis.connection.BitFieldSubCommands.BitFieldType.unsigned(dayOfMonth)).valueAt(0)
         );
         if (result == null || result.isEmpty()) {
             // 没有任何签到记录

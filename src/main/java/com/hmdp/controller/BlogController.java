@@ -35,6 +35,12 @@ public class BlogController {
         return blogService.likeBlog(id);
     }
 
+    // 临时 GET 映射，用于浏览器直接测试 like（调试用，生产不要保留）
+    @GetMapping("/like/{id}")
+    public Result likeBlogGet(@PathVariable("id") Long id) {
+        return blogService.likeBlog(id);
+    }
+
     @GetMapping("/of/me")
     public Result queryMyBlog(@RequestParam(value = "current", defaultValue = "1") Integer current) {
         // 获取登录用户
@@ -58,6 +64,12 @@ public class BlogController {
     }
     @PutMapping("/likes/{id}")
     public Result queryBlogLikes(@PathVariable("id") Long id) {
+        return blogService.queryBlogLikes(id);
+    }
+
+    // 临时 GET 映射，用于浏览器直接测试 queryBlogLikes（调试用，生产不要保留）
+    @GetMapping("/likes/{id}")
+    public Result queryBlogLikesGet(@PathVariable("id") Long id) {
         return blogService.queryBlogLikes(id);
     }
     @GetMapping("/of/follow")
